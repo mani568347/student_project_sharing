@@ -16,6 +16,7 @@ backend/server.log
 
 # JAR files
 *.jar
+!backend/target/*.jar
 
 # Environment files
 .env

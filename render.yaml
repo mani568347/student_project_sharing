@@ -1,9 +1,11 @@
 services:
   - type: web
     name: student-project-sharing
-    env: java
-    buildCommand: cd backend && ./mvnw package -DskipTests
-    startCommand: cd backend && java -jar target/sharing-0.0.1-SNAPSHOT.jar --server.port=$PORT
+    env: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/projects/list
     envVars:
       - key: PORT
         value: 8084
