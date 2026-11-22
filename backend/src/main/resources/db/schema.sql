@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS projects (
     file_path VARCHAR(255),
     category_id BIGINT,
     user_id BIGINT NOT NULL,
+    download_count INT DEFAULT 0,
+    open_to_collaboration BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
