@@ -1,0 +1,183 @@
+#!/bin/sh
+#
+# Apache Maven Wrapper Startup Script
+# https://maven.apache.org/wrapper/
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+################################################################################
+#  MAVEN WRAPPER STARTUP SCRIPT
+################################################################################
+
+# shellcheck disable=SC2034,SC2168
+# If MVNW_VERBOSE is set, be more verbose.
+if [ -n "${MVNW_VERBOSE}" ]; then
+  set -x
+fi
+
+# If MVNW_DEBUG is set, output debug information.
+if [ -n "${MVNW_DEBUG}" ]; then
+  set -v
+fi
+
+# Resolve the location of the 'mvnw' script.
+# POSIX compliant approach.
+SELF_PATH="$0"
+while [ -L "${SELF_PATH}" ]; do
+  SELF_DIR="$(dirname "${SELF_PATH}")"
+  SELF_PATH="$(readlink "${SELF_PATH}")"
+  case "${SELF_PATH}" in
+    /*) ;;
+    *) SELF_PATH="${SELF_DIR}/${SELF_PATH}" ;;
+  esac
+done
+MVNW_DIR="$(dirname "${SELF_PATH}")"
+WRAPPER_DIR="${MVNW_DIR}/.mvn/wrapper"
+WRAPPER_JAR="${WRAPPER_DIR}/maven-wrapper.jar"
+WRAPPER_PROPERTIES="${WRAPPER_DIR}/maven-wrapper.properties"
+
+# Function to check if a command exists
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+# Function to download the wrapper jar
+download_wrapper_jar() {
+  local url="$1"
+  local dest="$2"
+
+  if command_exists curl; then
+    curl -fsSL -o "${dest}" "${url}" 2>/dev/null
+  elif command_exists wget; then
+    wget -q -O "${dest}" "${url}" 2>/dev/null
+  else
+    return 1
+  fi
+  return 0
+}
+
+# Function to get Maven version from properties
+get_maven_version() {
+  local properties_file="$1"
+  if [ -f "${properties_file}" ]; then
+    grep -E '^wrapperUrl=' "${properties_file}" | sed -E 's/.*apache-maven-([0-9]+\.[0-9]+\.[0-9]+)-bin.*/\1/'
+  fi
+}
+
+# Function to get wrapper URL from properties
+get_wrapper_url() {
+  local properties_file="$1"
+  if [ -f "${properties_file}" ]; then
+    grep -E '^wrapperUrl=' "${properties_file}" | cut -d'=' -f2-
+  fi
+}
+
+# If wrapper jar exists, use it
+if [ -f "${WRAPPER_JAR}" ]; then
+  WRAPPER_JAR_EXISTS=true
+else
+  WRAPPER_JAR_EXISTS=false
+fi
+
+# If wrapper properties exist, read configuration
+if [ -f "${WRAPPER_PROPERTIES}" ]; then
+  MAVEN_VERSION=$(get_maven_version "${WRAPPER_PROPERTIES}")
+  WRAPPER_URL=$(get_wrapper_url "${WRAPPER_PROPERTIES}")
+else
+  # Default values
+  MAVEN_VERSION="3.9.6"
+  WRAPPER_URL="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MAVEN_VERSION}/apache-maven-${MAVEN_VERSION}-bin.zip"
+fi
+
+# Determine Maven home
+if [ -n "${MAVEN_HOME}" ]; then
+  MVN_CMD="${MAVEN_HOME}/bin/mvn"
+elif [ -n "${M2_HOME}" ]; then
+  MVN_CMD="${M2_HOME}/bin/mvn"
+else
+  # Try to find maven in PATH
+  if command_exists mvn; then
+    MVN_CMD="mvn"
+  else
+    MVN_CMD=""
+  fi
+fi
+
+# If we have a maven command, use it directly
+if [ -n "${MVN_CMD}" ] && [ -x "$(command -v "${MVN_CMD}")" ]; then
+  exec "${MVN_CMD}" "$@"
+fi
+
+# Otherwise, use the wrapper jar if available
+if [ "${WRAPPER_JAR_EXISTS}" = true ]; then
+  exec java -jar "${WRAPPER_JAR}" "$@"
+fi
+
+# Download wrapper jar if needed
+if [ ! -d "${WRAPPER_DIR}" ]; then
+  mkdir -p "${WRAPPER_DIR}"
+fi
+
+# For "only-script" distribution, we download maven directly instead of the wrapper jar
+# This is the default behavior - download maven distribution and extract it
+MAVEN_DIST_DIR="${WRAPPER_DIR}/apache-maven-${MAVEN_VERSION}"
+MAVEN_CMD="${MAVEN_DIST_DIR}/bin/mvn"
+
+if [ -x "${MAVEN_CMD}" ]; then
+  exec "${MAVEN_CMD}" "$@"
+fi
+
+# Download Maven distribution
+MAVEN_DIST_URL="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MAVEN_VERSION}/apache-maven-${MAVEN_VERSION}-bin.zip"
+MAVEN_DIST_ZIP="${WRAPPER_DIR}/apache-maven-${MAVEN_VERSION}-bin.zip"
+
+echo "Downloading Maven ${MAVEN_VERSION} from ${MAVEN_DIST_URL}..."
+
+if command_exists curl; then
+  curl -fsSL -o "${MAVEN_DIST_ZIP}" "${MAVEN_DIST_URL}"
+elif command_exists wget; then
+  wget -q -O "${MAVEN_DIST_ZIP}" "${MAVEN_DIST_URL}"
+else
+  echo "ERROR: Neither curl nor wget found. Cannot download Maven."
+  exit 1
+fi
+
+if [ ! -f "${MAVEN_DIST_ZIP}" ]; then
+  echo "ERROR: Failed to download Maven distribution."
+  exit 1
+fi
+
+# Extract
+if command_exists unzip; then
+  unzip -q -o "${MAVEN_DIST_ZIP}" -d "${WRAPPER_DIR}"
+elif command_exists jar; then
+  jar -xf "${MAVEN_DIST_ZIP}" -C "${WRAPPER_DIR}"
+else
+  echo "ERROR: Neither unzip nor jar found. Cannot extract Maven distribution."
+  exit 1
+fi
+
+# Clean up
+rm -f "${MAVEN_DIST_ZIP}"
+
+if [ -x "${MAVEN_CMD}" ]; then
+  exec "${MAVEN_CMD}" "$@"
+else
+  echo "ERROR: Failed to set up Maven."
+  exit 1
+fi

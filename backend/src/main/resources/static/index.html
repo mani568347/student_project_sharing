@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudentProject — Share & Discover Student Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gh: {
+                            bg: '#0d1117',
+                            surface: '#161b22',
+                            border: '#30363d',
+                            hover: '#21262d',
+                            text: '#c9d1d9',
+                            muted: '#8b949e',
+                            accent: '#58a6ff',
+                            green: '#238636',
+                            greenLight: '#2ea043',
+                            purple: '#8957e5',
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gh-bg text-gh-text font-sans antialiased flex flex-col min-h-screen">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2"></div>
+
+    <!-- ==================== NAVBAR (both views) ==================== -->
+    <nav id="navbar" class="border-b border-gh-border bg-gh-surface sticky top-0 z-40">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <!-- Logo -->
+                <a href="#" id="home-link" class="flex items-center gap-2.5 shrink-0 group">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform group-hover:scale-105">
+                        <rect x="2" y="8" width="20" height="18" rx="3" stroke="#58a6ff" stroke-width="2" fill="none"/>
+                        <path d="M8 4L2 8M8 4L14 8M2 8H14" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6 14L4 16M6 18L4 20" stroke="#2ea043" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="24" cy="14" r="5" stroke="#2ea043" stroke-width="1.5" fill="rgba(46,160,67,0.1)"/>
+                        <path d="M22.5 14L24 15.5L26 12.5" stroke="#2ea043" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-white font-semibold text-lg tracking-tight hidden sm:block">Student<span class="text-gh-accent">Project</span></span>
+                </a>
+
+                <!-- Search -->
+                <div id="landing-search" class="hidden md:flex items-center flex-1 max-w-xl mx-4">
+                    <div class="relative w-full">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gh-muted text-sm"></i>
+                        <input type="text" id="search" placeholder="Search projects, tags, or students..."
+                            class="w-full pl-9 pr-4 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent transition-colors h-8">
+                    </div>
+                </div>
+
+                <select id="category-filter" class="hidden lg:block px-3 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text focus:outline-none focus:border-gh-accent">
+                    <option value="" class="bg-gh-surface">All Categories</option>
+                </select>
+
+                <!-- Auth Section -->
+                <div id="auth-section" class="flex items-center gap-2.5 shrink-0">
+                    <!-- Logged out -->
+                    <div id="logged-out" class="flex items-center gap-2.5">
+                        <button onclick="openModal('login-modal')" class="text-gh-text hover:text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gh-hover transition-all">Sign in</button>
+                        <button onclick="openModal('register-modal')" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-4 py-1.5 rounded-md transition-all shadow-sm">Sign up</button>
+                    </div>
+                    <!-- Logged in -->
+                    <div id="logged-in" class="hidden items-center gap-2.5">
+                        <button id="upload-btn-nav" onclick="handleProtectedUpload()" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-4 py-1.5 rounded-md transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fas fa-plus text-xs"></i> New Project
+                        </button>
+                        <div class="relative" id="user-menu">
+                            <button onclick="toggleUserMenu()" class="flex items-center gap-2 p-1 rounded-md hover:bg-gh-hover transition-all" aria-label="User menu" aria-expanded="false" aria-haspopup="true">
+                                <span id="user-avatar" class="w-7 h-7 rounded-md bg-gh-purple text-white font-semibold text-sm inline-flex items-center justify-center select-none"></span>
+                                <i class="fas fa-caret-down text-gh-muted text-xs"></i>
+                            </button>
+                            <div id="user-dropdown" class="hidden absolute right-0 top-full mt-1 w-56 bg-gh-surface border border-gh-border rounded-md shadow-lg shadow-black/40 py-1 z-50" role="menu">
+                                <div class="px-3 py-2 border-b border-gh-border">
+                                    <p class="text-xs text-gh-muted">Signed in as</p>
+                                    <p id="user-email" class="text-sm font-semibold text-white truncate"></p>
+                                </div>
+                                <div class="py-1">
+                                    <a href="#" onclick="switchTab('myprojects'); closeUserMenu()" class="block px-3 py-1.5 text-gh-text hover:bg-gh-hover hover:text-white text-sm flex items-center gap-2" role="menuitem">
+                                        <i class="fas fa-folder text-gh-muted w-4 text-center"></i> Your Projects
+                                    </a>
+                                    <a href="#" onclick="switchTab('favorites'); closeUserMenu()" class="block px-3 py-1.5 text-gh-text hover:bg-gh-hover hover:text-white text-sm flex items-center gap-2" role="menuitem">
+                                        <i class="far fa-star text-gh-muted w-4 text-center"></i> Favorites
+                                    </a>
+                                    <a href="#" onclick="showProfile(); closeUserMenu()" class="block px-3 py-1.5 text-gh-text hover:bg-gh-hover hover:text-white text-sm flex items-center gap-2" role="menuitem">
+                                        <i class="fas fa-user text-gh-muted w-4 text-center"></i> Profile
+                                    </a>
+                                    <a href="#" onclick="showSettings(); closeUserMenu()" class="block px-3 py-1.5 text-gh-text hover:bg-gh-hover hover:text-white text-sm flex items-center gap-2" role="menuitem">
+                                        <i class="fas fa-cog text-gh-muted w-4 text-center"></i> Settings
+                                    </a>
+                                </div>
+                                <div class="border-t border-gh-border pt-1">
+                                    <button type="button" onclick="logout()" class="block w-full text-left px-3 py-1.5 text-red-400 hover:bg-gh-hover hover:text-red-300 text-sm flex items-center gap-2" role="menuitem">
+                                        <i class="fas fa-sign-out-alt w-4 text-center"></i> Sign out
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <button type="button" id="mobile-menu-btn" class="md:hidden p-2 rounded-md hover:bg-gh-hover transition-all" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                    <i class="fas fa-bars text-gh-text text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile search + menu -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gh-border px-4 pb-4 pt-3 space-y-3">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gh-muted text-sm"></i>
+                <input type="text" id="search-mobile" placeholder="Search projects..."
+                    class="w-full pl-9 pr-4 py-2 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent h-9">
+            </div>
+            <div class="flex gap-2">
+                <select id="category-filter-mobile" class="flex-1 px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text focus:outline-none focus:border-gh-accent">
+                    <option value="" class="bg-gh-surface">All Categories</option>
+                </select>
+                <button id="upload-btn-mobile" onclick="handleProtectedUpload()" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-4 py-2 rounded-md transition-all">
+                    <i class="fas fa-plus mr-1"></i> Upload
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== WELCOME BAR (authenticated only) ==================== -->
+    <div id="welcome-bar" class="hidden border-b border-gh-border bg-gh-surface/70">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <p class="text-sm text-gh-muted">
+                Welcome back, <span id="welcome-name" class="text-white font-semibold"></span> ·
+                <span id="welcome-date" class="font-mono"></span>
+            </p>
+            <button id="upload-btn-inline" onclick="handleProtectedUpload()" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 shadow-sm">
+                <i class="fas fa-plus text-xs"></i> New Project
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== LANDING PAGE (pre-login only) ==================== -->
+    <div id="landing-view">
+
+    <!-- Hero Section -->
+    <section id="hero-section" class="relative border-b border-gh-border py-20 sm:py-28 lg:py-32">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto">
+                <div class="inline-flex items-center gap-2 bg-gh-surface border border-gh-border rounded-full px-4 py-1.5 text-sm text-gh-muted mb-6">
+                    <span class="w-2 h-2 rounded-full bg-gh-green"></span>
+                    Open-source student project platform
+                </div>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-tight mb-6">
+                    Discover, share &amp; build<br>
+                    <span class="text-gh-accent">together</span>
+                </h1>
+                <p class="text-lg sm:text-xl text-gh-muted mb-10 max-w-2xl mx-auto leading-relaxed">
+                    A community-driven platform where students showcase their projects,
+                    exchange ideas, and learn from each other's work.
+                </p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button onclick="openModal('register-modal')" class="w-full sm:w-auto bg-gh-green hover:bg-gh-greenLight text-white font-semibold px-8 py-3 rounded-md text-base transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-rocket text-sm"></i> Get Started Free
+                    </button>
+                    <a href="#projects-section" class="w-full sm:w-auto bg-gh-surface hover:bg-gh-hover border border-gh-border text-white font-semibold px-8 py-3 rounded-md text-base transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-arrow-right text-sm"></i> Browse Projects
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <section class="border-b border-gh-border bg-gh-surface/95">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center" id="stats-grid">
+                <div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white" id="stat-projects">—</div>
+                    <div class="text-sm text-gh-muted mt-0.5">Projects</div>
+                </div>
+                <div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white" id="stat-students">—</div>
+                    <div class="text-sm text-gh-muted mt-0.5">Students</div>
+                </div>
+                <div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white" id="stat-categories">—</div>
+                    <div class="text-sm text-gh-muted mt-0.5">Categories</div>
+                </div>
+                <div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white" id="stat-downloads">—</div>
+                    <div class="text-sm text-gh-muted mt-0.5">Downloads</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trending Projects Spotlight -->
+    <section class="py-12 bg-gh-surface/95 border-b border-gh-border">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-fire text-orange-400"></i> Trending Projects
+            </h2>
+            <div id="trending-projects" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Trending</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">E-Commerce REST API</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        A full-featured REST API for e-commerce platforms with Spring Boot, MongoDB, and JWT authentication.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">Spring Boot</span>
+                        <span class="repo-tag">MongoDB</span>
+                        <span class="repo-tag">JWT</span>
+                        <span class="repo-tag">REST</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="#" onclick="openProjectDetail(1)" class="btn btn-primary">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </a>
+                        <a href="https://vercel.com/example" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt mr-1"></i> Live Demo
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@johndoe</span>
+                        <i class="fas fa-star"></i>
+                        <span>1.2k</span>
+                        <i class="fas fa-download"></i>
+                        <span>456</span>
+                    </div>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Trending</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">React Portfolio Template</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        Modern portfolio template built with React, TypeScript, and Tailwind CSS. Includes dark mode, animations, and CMS integration.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">React</span>
+                        <span class="repo-tag">TypeScript</span>
+                        <span class="repo-tag">Tailwind</span>
+                        <span class="repo-tag">Vite</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="#" onclick="openProjectDetail(2)" class="btn btn-primary">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </a>
+                        <a href="https://vercel.com/example" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt mr-1"></i> Live Demo
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@janesmith</span>
+                        <i class="fas fa-star"></i>
+                        <span>890</span>
+                        <i class="fas fa-download"></i>
+                        <span>312</span>
+                    </div>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Trending</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Machine Learning Model Zoo</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        Collection of pre-trained ML models for computer vision, NLP, and time series forecasting with TensorFlow and PyTorch.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">Python</span>
+                        <span class="repo-tag">TensorFlow</span>
+                        <span class="repo-tag">PyTorch</span>
+                        <span class="repo-tag">ML</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="#" onclick="openProjectDetail(3)" class="btn btn-primary">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </a>
+                        <a href="https://vercel.com/example" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt mr-1"></i> Live Demo
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@mlresearcher</span>
+                        <i class="fas fa-star"></i>
+                        <span>2.1k</span>
+                        <i class="fas fa-download"></i>
+                        <span>789</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Explore by Tech Stack -->
+    <section class="py-12 bg-gh-surface/95 border-b border-gh-border">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-tags text-gh-accent"></i> Explore by Tech Stack
+            </h2>
+            <div class="flex flex-wrap gap-3 mb-8" id="tech-stack-chips">
+                <button onclick="filterByTech('all')" class="tech-chip active bg-gh-accent/10 text-gh-accent border border-gh-accent/20">
+                    All Technologies
+                </button>
+                <button onclick="filterByTech('python')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Python
+                </button>
+                <button onclick="filterByTech('javascript')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    JavaScript
+                </button>
+                <button onclick="filterByTech('react')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    React
+                </button>
+                <button onclick="filterByTech('machine-learning')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Machine Learning
+                </button>
+                <button onclick="filterByTech('mobile')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Mobile Apps
+                </button>
+                <button onclick="filterByTech('cloud')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Cloud / DevOps
+                </button>
+                <button onclick="filterByTech('cybersecurity')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Cybersecurity
+                </button>
+                <button onclick="filterByTech('fullstack')" class="tech-chip bg-gh-bg/50 text-gh-text border border-gh-border">
+                    Full Stack
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Project Ideas & Collaboration -->
+    <section class="py-12 bg-gh-surface/95 border-b border-gh-border">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-lightbulb text-gh-green"></i> Project Ideas & Collaboration
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="collaboration-projects">
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Open to Contribute</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Open Source Learning Platform</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        Looking for frontend (React), backend (Node.js), and DevOps contributors to build an open-source learning management system for students.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">React</span>
+                        <span class="repo-tag">Node.js</span>
+                        <span class="repo-tag">Docker</span>
+                        <span class="repo-tag">PostgreSQL</span>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <a href="#" onclick="openProjectDetail(4)" class="btn btn-primary">
+                            <i class="fas fa-user-plus mr-1"></i> Connect
+                        </a>
+                        <a href="#" onclick="openProjectDetail(4)" class="btn btn-secondary">
+                            <i class="fas fa-folder-open mr-1"></i> View Project
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@teamlead</span>
+                        <i class="fas fa-star"></i>
+                        <span>12</span>
+                    </div>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Open to Contribute</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Blockchain Voting System</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        Secure, transparent voting system using Ethereum smart contracts. Need Solidity developers and frontend engineers.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">Solidity</span>
+                        <span class="repo-tag">Ethereum</span>
+                        <span class="repo-tag">React</span>
+                        <span class="repo-tag">Web3</span>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <a href="#" onclick="openProjectDetail(5)" class="btn btn-primary">
+                            <i class="fas fa-user-plus mr-1"></i> Connect
+                        </a>
+                        <a href="#" onclick="openProjectDetail(5)" class="btn btn-secondary">
+                            <i class="fas fa-folder-open mr-1"></i> View Project
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@blockchain-dev</span>
+                        <i class="fas fa-star"></i>
+                        <span>8</span>
+                    </div>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-6 hover:border-gh-accent/50 transition-colors group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-gh-green inline-flex"></span>
+                        <span class="text-sm font-semibold text-gh-text">Open to Contribute</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">AI-Powered Study Assistant</h3>
+                    <p class="text-gh-muted text-sm mb-4 line-clamp-3">
+                        AI chatbot for students to answer academic questions, generate study guides, and track progress. Need Python/ML engineers.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="repo-tag">Python</span>
+                        <span class="repo-tag">FastAPI</span>
+                        <span class="repo-tag">GPT</span>
+                        <span class="repo-tag">SQLite</span>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <a href="#" onclick="openProjectDetail(6)" class="btn btn-primary">
+                            <i class="fas fa-user-plus mr-1"></i> Connect
+                        </a>
+                        <a href="#" onclick="openProjectDetail(6)" class="btn btn-secondary">
+                            <i class="fas fa-folder-open mr-1"></i> View Project
+                        </a>
+                    </div>
+                    <div class="mt-4 flex items-center gap-3 text-sm text-gh-muted border-t pt-3 border-gh-border">
+                        <i class="fas fa-user"></i>
+                        <span>@ai-study</span>
+                        <i class="fas fa-star"></i>
+                        <span>5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main id="projects-section" class="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-code text-gh-accent text-base"></i> Explore Projects
+                </h2>
+                <p class="text-sm text-gh-muted mt-0.5">Browse projects shared by fellow students</p>
+            </div>
+            <span id="project-count" class="text-sm text-gh-muted font-mono bg-gh-surface border border-gh-border px-3 py-1 rounded-md">Loading...</span>
+        </div>
+
+        <div id="filter-row-desktop" class="hidden md:flex items-center gap-2 mb-6 flex-wrap">
+            <div class="relative flex-1 min-w-[200px]">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gh-muted text-sm"></i>
+                <input type="text" id="search-desktop-only" placeholder="Filter by title, tag, or author..."
+                    class="w-full pl-9 pr-4 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent h-8">
+            </div>
+            <select id="category-filter-desktop-only" class="px-3 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text focus:outline-none focus:border-gh-accent h-8">
+                <option value="">All Categories</option>
+            </select>
+            <div class="flex items-center gap-1 ml-auto">
+                <button onclick="setView('grid')" id="view-grid-btn" class="p-1.5 rounded bg-gh-hover text-gh-accent" title="Grid view"><i class="fas fa-th-large"></i></button>
+                <button onclick="setView('list')" id="view-list-btn" class="p-1.5 rounded hover:bg-gh-hover text-gh-muted" title="List view"><i class="fas fa-list"></i></button>
+            </div>
+        </div>
+
+        <div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <div id="empty-state" class="hidden text-center py-20">
+            <svg class="mx-auto w-16 h-16 text-gh-muted mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <h3 class="text-lg font-semibold text-gh-text mb-1">No projects found</h3>
+            <p class="text-gh-muted text-sm mb-4">Try adjusting your search or be the first to upload!</p>
+            <button onclick="handleProtectedUpload()" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-4 py-2 rounded-md transition-all">
+                <i class="fas fa-plus mr-1"></i> Upload a Project
+            </button>
+        </div>
+    </main>
+
+    <!-- How to Showcase Onboarding Banner -->
+    <section class="py-8 bg-gh-surface/95 border-b border-gh-border">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="onboarding-banner" class="flex items-center gap-4 bg-gh-bg border border-gh-border rounded-md p-6 relative">
+                <div class="flex-shrink-0 w-10 h-10 rounded-md bg-gh-accent/10 flex items-center justify-center">
+                    <i class="fas fa-rocket text-gh-accent text-xl"></i>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-lg font-semibold text-white">How to Showcase Your Student Project</h3>
+                    <p class="text-gh-muted text-sm leading-relaxed">
+                        A quick 3-step guide to get your project discovered by fellow students and recruiters.
+                    </p>
+                    <div class="flex gap-4 text-sm font-medium">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full bg-gh-green flex items-center justify-center text-xs font-bold text-white">1</div>
+                            <span>Upload your project archive &amp; repo</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full bg-gh-green flex items-center justify-center text-xs font-bold text-white">2</div>
+                            <span>Add your live deployment link (Vercel/Netlify)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full bg-gh-green flex items-center justify-center text-xs font-bold text-white">3</div>
+                            <span>Share your student profile link on your resume</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeOnboardingBanner()" class="text-gh-muted hover:text-white p-1 rounded-md hover:bg-gh-hover transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features-section" class="border-t border-gh-border bg-gh-surface/95 py-16">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold text-white text-center mb-10">Why Students Love Us</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gh-surface border border-gh-border rounded-md p-5 hover:border-gh-accent/50 transition-colors group">
+                    <div class="w-10 h-10 rounded-md bg-gh-accent/10 flex items-center justify-center mb-3 group-hover:bg-gh-accent/20 transition-colors">
+                        <i class="fas fa-graduation-cap text-gh-accent text-lg"></i>
+                    </div>
+                    <h3 class="font-semibold text-white mb-1">Built for Students</h3>
+                    <p class="text-sm text-gh-muted leading-relaxed">Share coursework, final-year projects, hackathon entries, and everything in between with peers.</p>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-5 hover:border-gh-accent/50 transition-colors group">
+                    <div class="w-10 h-10 rounded-md bg-gh-accent/10 flex items-center justify-center mb-3 group-hover:bg-gh-accent/20 transition-colors">
+                        <i class="fas fa-code-branch text-gh-accent text-lg"></i>
+                    </div>
+                    <h3 class="font-semibold text-white mb-1">GitHub-Style Code Views</h3>
+                    <p class="text-sm text-gh-muted leading-relaxed">Clean repo cards with live preview badges, tags, and one-click downloads or code browsing.</p>
+                </div>
+                <div class="bg-gh-surface border border-gh-border rounded-md p-5 hover:border-gh-accent/50 transition-colors group">
+                    <div class="w-10 h-10 rounded-md bg-gh-accent/10 flex items-center justify-center mb-3 group-hover:bg-gh-accent/20 transition-colors">
+                        <i class="fas fa-users text-gh-accent text-lg"></i>
+                    </div>
+                    <h3 class="font-semibold text-white mb-1">Community Driven</h3>
+                    <p class="text-sm text-gh-muted leading-relaxed">Find contributors, collaborators, and mentors through powerful search and filtering.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </div><!-- end landing-view -->
+
+    <!-- ==================== DASHBOARD VIEW (post-login only) ==================== -->
+    <div id="dashboard-view" class="hidden">
+
+    <main class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 bg-gh-surface/95">
+        <div class="flex gap-6">
+            <!-- Feed area -->
+            <div class="flex-1 min-w-0">
+                <!-- Tabs -->
+                <div class="border-b border-gh-border mb-5">
+                    <nav class="flex gap-0">
+                        <button id="tab-community" onclick="switchTab('community')" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-gh-accent text-white transition-all">
+                            <i class="fas fa-globe mr-1.5"></i>Community
+                        </button>
+                        <button id="tab-myprojects" onclick="switchTab('myprojects')" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gh-muted hover:text-gh-text transition-all">
+                            <i class="fas fa-folder-open mr-1.5"></i>My Projects
+                        </button>
+                        <button id="tab-favorites" onclick="switchTab('favorites')" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gh-muted hover:text-gh-text transition-all">
+                            <i class="far fa-star mr-1.5"></i>Favorites
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Dashboard header row -->
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 id="tab-title" class="text-lg font-semibold text-white">Community Projects</h2>
+                        <p id="tab-subtitle" class="text-sm text-gh-muted mt-0.5">Discover what others are building</p>
+                    </div>
+                    <span id="project-count" class="text-sm text-gh-muted font-mono bg-gh-surface border border-gh-border px-3 py-1 rounded-md">—</span>
+                </div>
+
+                <!-- Filter row -->
+                <div class="flex items-center gap-2 mb-5 flex-wrap">
+                    <div class="relative flex-1 min-w-[180px]">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gh-muted text-sm"></i>
+                        <input type="text" id="search-desktop-only" placeholder="Filter by title, tag, or author..."
+                            class="w-full pl-9 pr-4 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent h-8">
+                    </div>
+                    <select id="category-filter-desktop-only" class="px-3 py-1.5 bg-gh-bg border border-gh-border rounded-md text-sm text-gh-text focus:outline-none focus:border-gh-accent h-8">
+                        <option value="">All Categories</option>
+                    </select>
+                    <div class="flex items-center gap-1 ml-auto">
+                        <button onclick="setView('grid')" id="view-grid-btn" class="p-1.5 rounded bg-gh-hover text-gh-accent" title="Grid view"><i class="fas fa-th-large"></i></button>
+                        <button onclick="setView('list')" id="view-list-btn" class="p-1.5 rounded hover:bg-gh-hover text-gh-muted" title="List view"><i class="fas fa-list"></i></button>
+                    </div>
+                </div>
+
+                <div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="empty-state" class="hidden text-center py-20">
+                    <i class="fas fa-folder-open text-4xl text-gh-muted mb-3 opacity-40"></i>
+                    <h3 id="empty-title" class="text-lg font-semibold text-gh-text mb-1">Nothing here yet</h3>
+                    <p id="empty-msg" class="text-gh-muted text-sm mb-4">Be the first to share something awesome.</p>
+                    <button id="empty-upload-btn" onclick="handleProtectedUpload()" class="bg-gh-green hover:bg-gh-greenLight text-white text-sm font-semibold px-4 py-2 rounded-md transition-all hidden">
+                        <i class="fas fa-plus mr-1"></i> Upload a Project
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right sidebar -->
+            <aside id="sidebar" class="w-72 shrink-0 hidden lg:block space-y-4">
+                <!-- User card -->
+                <div class="bg-gh-surface border border-gh-border rounded-md p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span id="sidebar-avatar" class="w-10 h-10 rounded-md bg-gh-purple text-white font-semibold text-lg inline-flex items-center justify-center"></span>
+                        <div class="min-w-0">
+                            <p id="sidebar-name" class="text-white font-semibold truncate"></p>
+                            <p id="sidebar-username" class="text-sm text-gh-muted font-mono"></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-gh-bg rounded p-2">
+                            <p id="sb-stat-projects" class="text-lg font-bold text-white">0</p>
+                            <p class="text-xs text-gh-muted">Projects</p>
+                        </div>
+                        <div class="bg-gh-bg rounded p-2">
+                            <p id="sb-stat-favorites" class="text-lg font-bold text-white">0</p>
+                            <p class="text-xs text-gh-muted">Favs</p>
+                        </div>
+                        <div class="bg-gh-bg rounded p-2">
+                            <p id="sb-stat-activity" class="text-lg font-bold text-white">0</p>
+                            <p class="text-xs text-gh-muted">Days</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trending categories -->
+                <div class="bg-gh-surface border border-gh-border rounded-md p-4">
+                    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fas fa-fire text-orange-400"></i> Trending Categories
+                    </h3>
+                    <div id="trending-cats" class="space-y-2">
+                        <p class="text-sm text-gh-muted">Loading…</p>
+                    </div>
+                </div>
+
+                <!-- Recent activity -->
+                <div class="bg-gh-surface border border-gh-border rounded-md p-4">
+                    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fas fa-clock text-gh-accent"></i> Recent Activity
+                    </h3>
+                    <div id="recent-activity" class="space-y-2 text-sm">
+                        <p class="text-gh-muted">No recent activity</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    </div><!-- end dashboard-view -->
+
+    <!-- Footer (always visible) -->
+    <footer class="border-t border-gh-border bg-gh-surface/50 mt-auto">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><rect x="2" y="8" width="20" height="18" rx="3" stroke="#58a6ff" stroke-width="2" fill="none"/><path d="M8 4L2 8M8 4L14 8M2 8H14" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span class="text-gray-300 font-semibold">StudentProject</span>
+                    <span class="text-xs text-gh-muted ml-1 font-mono">&copy; 2026</span>
+                </div>
+                <div class="flex flex-wrap justify-center gap-6 text-sm text-gh-muted">
+                    <a href="#" class="hover:text-white transition-colors">Terms</a>
+                    <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                    <a href="#" class="hover:text-white transition-colors">Security</a>
+                    <a href="#" class="hover:text-white transition-colors">Docs</a>
+                </div>
+                <p class="text-xs text-gh-muted font-mono">Built with <i class="fas fa-heart text-red-500 mx-0.5"></i> by students</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gh-surface border border-gh-border rounded-lg w-full max-w-md shadow-2xl shadow-black/60 animate-slide-up max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="sticky top-0 bg-gh-surface border-b border-gh-border px-6 py-4 flex justify-between items-center z-10">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Sign in to StudentProject</h2>
+                    <p class="text-sm text-gh-muted mt-0.5">Use your account to continue</p>
+                </div>
+                <button type="button" onclick="closeModal('login-modal')" class="text-gh-muted hover:text-white p-1.5 rounded-md hover:bg-gh-hover transition-all" aria-label="Close">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Username <span class="text-red-400">*</span></label>
+                        <input type="text" id="login-username" required autocomplete="username"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Password <span class="text-red-400">*</span></label>
+                        <input type="password" id="login-password" required autocomplete="current-password"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <button type="submit" class="w-full bg-gh-green hover:bg-gh-greenLight text-white py-2 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 h-9">
+                        <span id="login-btn-text">Sign in</span>
+                        <span id="login-btn-loading" class="hidden flex items-center gap-2">
+                            <i class="fas fa-spinner fa-spin"></i> Signing in...
+                        </span>
+                    </button>
+                </form>
+                <div class="mt-4 pt-4 border-t border-gh-border text-center">
+                    <p class="text-sm text-gh-muted">Don't have an account?
+                        <a href="#" onclick="switchModal('register-modal')" class="text-gh-accent hover:underline font-medium">Sign up</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="register-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gh-surface border border-gh-border rounded-lg w-full max-w-md shadow-2xl shadow-black/60 animate-slide-up max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="sticky top-0 bg-gh-surface border-b border-gh-border px-6 py-4 flex justify-between items-center z-10">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Create your account</h2>
+                    <p class="text-sm text-gh-muted mt-0.5">Join the student project community</p>
+                </div>
+                <button type="button" onclick="closeModal('register-modal')" class="text-gh-muted hover:text-white p-1.5 rounded-md hover:bg-gh-hover transition-all" aria-label="Close">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Full Name <span class="text-red-400">*</span></label>
+                        <input type="text" id="register-name" required
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Username <span class="text-red-400">*</span></label>
+                        <input type="text" id="register-username" required minlength="3"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Email <span class="text-red-400">*</span></label>
+                        <input type="email" id="register-email" required autocomplete="email"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Password <span class="text-red-400">*</span></label>
+                        <input type="password" id="register-password" required minlength="6" autocomplete="new-password"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Confirm Password <span class="text-red-400">*</span></label>
+                        <input type="password" id="register-confirm" required autocomplete="new-password"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                    </div>
+                    <button type="submit" class="w-full bg-gh-green hover:bg-gh-greenLight text-white py-2 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 h-9">
+                        <span id="register-btn-text">Create Account</span>
+                        <span id="register-btn-loading" class="hidden flex items-center gap-2">
+                            <i class="fas fa-spinner fa-spin"></i> Creating...
+                        </span>
+                    </button>
+                </form>
+                <div class="mt-4 pt-4 border-t border-gh-border text-center">
+                    <p class="text-sm text-gh-muted">Already have an account?
+                        <a href="#" onclick="switchModal('login-modal')" class="text-gh-accent hover:underline font-medium">Sign in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gh-surface border border-gh-border rounded-lg w-full max-w-2xl shadow-2xl shadow-black/60 animate-slide-up max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="sticky top-0 bg-gh-surface border-b border-gh-border px-6 py-4 flex justify-between items-center z-10">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Upload a Project</h2>
+                    <p class="text-sm text-gh-muted mt-0.5">Share your work with the community</p>
+                </div>
+                <button type="button" onclick="closeModal('upload-modal')" class="text-gh-muted hover:text-white p-1.5 rounded-md hover:bg-gh-hover transition-all" aria-label="Close">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="upload-form" onsubmit="handleUpload(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Project Title <span class="text-red-400">*</span></label>
+                        <input type="text" id="project-title" required maxlength="100"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9"
+                            placeholder="e.g., E-Commerce REST API with Spring Boot">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Description <span class="text-red-400">*</span></label>
+                        <textarea id="project-description" required rows="4" maxlength="2000"
+                            class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm resize-none"
+                            placeholder="Briefly describe what your project does, tech stack, and key features..."></textarea>
+                        <p class="text-xs text-gh-muted mt-1" id="desc-count">0/2000 characters</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gh-text mb-1.5">Category <span class="text-red-400">*</span></label>
+                            <select id="project-category" required
+                                class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9">
+                                <option value="">Select category</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gh-text mb-1.5">Tags</label>
+                            <input type="text" id="project-tags"
+                                class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9"
+                                placeholder="react, nodejs, mongodb">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gh-text mb-1.5">
+                                <i class="fab fa-github mr-1 text-gh-muted"></i> Source Code URL
+                            </label>
+                            <input type="url" id="project-repo"
+                                class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9 font-mono text-xs"
+                                placeholder="https://github.com/user/repo">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gh-text mb-1.5">
+                                <i class="fas fa-external-link-alt mr-1 text-gh-green"></i> Live Demo URL
+                            </label>
+                            <input type="url" id="project-demo"
+                                class="w-full px-3 py-2 bg-gh-bg border border-gh-border rounded-md text-gh-text placeholder-gh-muted focus:outline-none focus:border-gh-accent focus:ring-1 focus:ring-gh-accent text-sm h-9 font-mono text-xs"
+                                placeholder="https://myapp.vercel.app">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gh-text mb-1.5">Project File (optional)</label>
+                        <div class="border-2 border-dashed border-gh-border rounded-md p-5 text-center hover:border-gh-accent/50 transition-colors cursor-pointer" id="file-drop-zone">
+                            <input type="file" id="project-file" accept=".zip,.pdf,.tar,.gz,.rar" class="hidden" onchange="handleFileSelect(event)">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-gh-muted mb-2"></i>
+                            <p class="text-sm text-gh-muted">Drag &amp; drop a file or <span class="text-gh-accent">browse</span></p>
+                            <p class="text-xs text-gh-muted mt-1">Max 10MB: .zip, .pdf, .tar, .gz, .rar</p>
+                            <p id="selected-file-name" class="text-sm text-gh-green mt-2 hidden"></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 pt-2 border-t border-gh-border">
+                        <button type="button" onclick="closeModal('upload-modal')" class="flex-1 px-4 py-2 border border-gh-border rounded-md text-gh-text hover:bg-gh-hover hover:text-white transition-all text-sm font-medium">Cancel</button>
+                        <button type="submit" class="flex-1 bg-gh-green hover:bg-gh-greenLight text-white py-2 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 h-9">
+                            <span id="upload-btn-text"><i class="fas fa-upload mr-1"></i> Publish Project</span>
+                            <span id="upload-btn-loading" class="hidden flex items-center gap-2">
+                                <i class="fas fa-spinner fa-spin"></i> Uploading...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gh-surface border border-gh-border rounded-lg w-full max-w-2xl shadow-2xl shadow-black/60 animate-slide-up max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="sticky top-0 bg-gh-surface border-b border-gh-border px-6 py-4 flex justify-between items-center z-10">
+                <h2 class="text-base font-semibold text-white">Project Details</h2>
+                <button type="button" onclick="closeModal('detail-modal')" class="text-gh-muted hover:text-white p-1.5 rounded-md hover:bg-gh-hover transition-all" aria-label="Close">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div id="detail-content" class="flex-1 overflow-y-auto p-6"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
