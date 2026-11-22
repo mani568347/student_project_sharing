@@ -1,14 +1,19 @@
-# Use Eclipse Temurin (Adoptium) JDK 21 image
+# Stage 1: Build Java Application
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
+COPY backend/mvnw .
+COPY backend/.mvn .mvn
+COPY backend/pom.xml .
+RUN chmod +x ./mvnw
+# Download dependencies first for caching
+RUN ./mvnw dependency:go-offline -B || true
+COPY backend/src src
+RUN ./mvnw clean package -DskipTests
+
+# Stage 2: Minimal Runtime Environment
 FROM eclipse-temurin:21-jre-alpine
-
-# Set working directory
 WORKDIR /app
-
-# Copy the built JAR from target directory
-COPY backend/target/sharing-0.0.1-SNAPSHOT.jar app.jar
-
-# Expose port 8084
+COPY --from=builder /build/target/*.jar app.jar
 EXPOSE 8084
-
-# Run the application with explicit port
+ENV PORT=8084
 ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8084"]

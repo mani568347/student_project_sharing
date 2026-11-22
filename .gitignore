@@ -1,31 +1,4 @@
 ﻿# Maven target directory
 backend/target/
-
-# IDE
-.idea/
-.vscode/
-*.iml
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-backend/server.log
-
-# JAR files
-*.jar
-!backend/target/*.jar
-
-# Environment files
-.env
-.env.local
-
-# Test uploads
-backend/test-uploads/
-backend/uploads/
-
-# Frontend build (if any)
-frontend/dist/
-frontend/node_modules/
+# except the final packaged jar which Render needs
+!backend/target/sharing-0.0.1-SNAPSHOT.jar
