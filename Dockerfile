@@ -1,14 +1,10 @@
 # Stage 1: Build Java Application
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /build
-COPY backend/mvnw .
-COPY backend/.mvn .mvn
 COPY backend/pom.xml .
-RUN chmod +x ./mvnw
-# Download dependencies first for caching
-RUN ./mvnw dependency:go-offline -B || true
-COPY backend/src src
-RUN ./mvnw clean package -DskipTests
+RUN mvn dependency:go-offline -B || true
+COPY backend/src ./src
+RUN mvn clean package -DskipTests
 
 # Stage 2: Minimal Runtime Environment
 FROM eclipse-temurin:21-jre-alpine
