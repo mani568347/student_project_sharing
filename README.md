@@ -11,7 +11,7 @@ A full-stack web platform where students can **discover, share, and collaborate*
 | **Frontend** | Vanilla HTML5 · CSS3 · JavaScript (ES6+) · Tailwind CSS · Font Awesome |
 | **Backend** | Java 21 · Spring Boot 3.x · REST API · JWT Authentication |
 | **Database** | MySQL — tables for Users, Projects, Categories, and Tags |
-| **Deployment** | Docker → Render (free tier, Oregan region) |
+| **Deployment** | Docker → [Railway](https://railway.app/) (free tier) · [Live App](https://student-project-sharing-production.up.railway.app/) |
 | **Security** | BCrypt password hashing · JWT tokens · CORS-aware security config |
 
 ### Core Features
@@ -54,16 +54,16 @@ The backend seeds one test user and five categories on first run:
 
 ### Configuration
 
-All runtime values are driven by environment variables. The default `application.properties` falls back gracefully for local dev; on Render they come from `render.yaml`:
+All runtime values are driven by environment variables. The default `application.properties` falls back gracefully for local dev; on Railway they come from the dashboard.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `PORT` | `8084` | HTTP port (Render assigns its own) |
+| `PORT` | `8084` | HTTP port (Railway assigns its own at runtime) |
 | `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3306/student_project_sharing` | MySQL JDBC URL |
 | `SPRING_DATASOURCE_USERNAME` | `root` | DB user |
 | `SPRING_DATASOURCE_PASSWORD` | *(see below)* | DB password |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | Schema migration mode |
-| `JAVA_TOOL_OPTIONS` | `-Xms128m -Xmx320m` | Memory caps for Render free tier |
+| `JAVA_TOOL_OPTIONS` | `-Xms128m -Xmx320m` | Memory caps for Railway free tier |
 
 > ⚠️ Change `jwt.secret` before deploying to production — the current value is hard-coded for development only.
 
@@ -71,7 +71,7 @@ All runtime values are driven by environment variables. The default `application
 
 ## 🐳 Docker
 
-The root `Dockerfile` runs the pre-built `app.jar` directly — no build step inside the container. This matches the Render pipeline exactly.
+The root `Dockerfile` runs the pre-built `app.jar` directly — no build step inside the container. This matches the Railway deployment pipeline exactly.
 
 ```bash
 docker build -t projectshare .
@@ -84,15 +84,23 @@ docker run -p 8084:8084 \
 
 ---
 
-## ☁️ Deploy to Render
+## 🚂 Deploy to Railway
 
-Everything needed is already in the repo. Push to GitHub and connect Render — `render.yaml` handles the rest.
+Everything you need is already in the repo. Railway auto-detects the `Dockerfile`.
 
-1. **Sign up** at [render.com](https://render.com)
-2. Create a **New → Database** (MySQL, free tier) and copy the connection URI
-3. Create a **New → Web Service**, set the source to this repo, paste the URI into `SPRING_DATASOURCE_URL`, and deploy
+1. **Sign up** at [railway.app](https://railway.app)
+2. Click **New → Project → Deploy from GitHub repo** and select this repository
+3. Add these environment variables in Railway's dashboard (**Settings → Variables**):
 
-The health check (`/api/projects/list`) ensures Render only routes traffic once the app is ready.
+   | Variable | Value |
+   |----------|-------|
+   | `PORT` | `8084` |
+   | `SPRING_DATASOURCE_URL` | Your MySQL connection string |
+   | `SPRING_DATASOURCE_USERNAME` | DB username |
+   | `SPRING_DATASOURCE_PASSWORD` | DB password |
+   | `JAVA_TOOL_OPTIONS` | `-Xms128m -Xmx320m -XX:+UseSerialGC` |
+
+4. Push any commit — Railway rebuilds automatically.
 
 ---
 
