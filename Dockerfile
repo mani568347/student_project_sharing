@@ -1,14 +1,17 @@
-# Build stage - use official Maven image (already has Java + Maven)
-FROM maven:3.9-eclipse-temurin-21 AS builder
-WORKDIR /build
-COPY backend/pom.xml .
-COPY backend/src ./src
-RUN mvn clean package -DskipTests
+# Production Dockerfile - runs pre-built Spring Boot application
+# No Maven compilation needed, just runs the JAR
 
-# Runtime stage - minimal JRE image
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
-COPY --from=builder /build/target/*.jar app.jar
+
+# Copy pre-built Spring Boot JAR
+COPY app.jar app.jar
+
+# Allocate safe heap memory for Render 512MB limit
+ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx320m -XX:+UseSerialGC"
+
 EXPOSE 8084
-ENV PORT=8084
-ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8084"]
+
+# Use PORT env var dynamically set by Render
+ENTRYPOINT ["sh", "-c", "java $JAVA_TOOL_OPTIONS -jar app.jar --server.port=${PORT:-8084}"]

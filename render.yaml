@@ -17,3 +17,9 @@ services:
         sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: update
+      - key: SERVER_PORT
+        value: 8084
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+      - key: SPRING_SQL_INIT_MODE
+        value: always
